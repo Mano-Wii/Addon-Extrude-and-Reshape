@@ -29,21 +29,20 @@ bl_info = {
     "wiki_url" : "http://blenderartists.org/forum/showthread.php?376618-Addon-Push-Pull-Face",
     "category": "Mesh"}
 
-print('--------------------------------------------------------------')
 import bpy
 import bmesh
 from mathutils import Vector
 from bpy.props import FloatProperty
 
 def intersect_bound_box_edge_edge(a1, a2, b1, b2, precision = 0.0001):
-    bbx1 = sorted([a1.x, a2.x])
-    bbx2 = sorted([b1.x, b2.x])
+    bbx1 = sorted([a1[0], a2[0]])
+    bbx2 = sorted([b1[0], b2[0]])
     if ((bbx1[0] - precision) <= bbx2[1]) and (bbx1[1] >= (bbx2[0] - precision)):
-        bby1 = sorted([a1.y, a2.y])
-        bby2 = sorted([b1.y, b2.y])
+        bby1 = sorted([a1[1], a2[1]])
+        bby2 = sorted([b1[1], b2[1]])
         if ((bby1[0] - precision) <= bby2[1]) and (bby1[1] >= (bby2[0] - precision)):
-            bbz1 = sorted([a1.z, a2.z])
-            bbz2 = sorted([b1.z, b2.z])
+            bbz1 = sorted([a1[2], a2[2]])
+            bbz2 = sorted([b1[2], b2[2]])
             if ((bbz1[0] - precision) <= bbz2[1]) and (bbz1[1] >= (bbz2[0] - precision)):
                 return True
             else:
@@ -59,11 +58,11 @@ def list_BVH(edges1, edges2, precision = 0.0001):
     for ed1 in edges1:
         for ed2 in edges2:
             if ed1 != ed2:
-                a1 = ed1.verts[0].co
-                a2 = ed1.verts[1].co
-                b1 = ed2.verts[0].co
-                b2 = ed2.verts[1].co
-                intersect = intersect_bound_box_edge_edge(a1, a2, b1, b2, precision = precision)
+                a1 = ed1.verts[0]
+                a2 = ed1.verts[1]
+                b1 = ed2.verts[0]
+                b2 = ed2.verts[1]
+                intersect = intersect_bound_box_edge_edge(a1.co, a2.co, b1.co, b2.co, precision = precision)
                 if intersect:
                     print('so')
                     tmp_set1.add(ed1)
@@ -97,19 +96,19 @@ def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
                 lc1 = cross1.x+cross1.y+cross1.z
                 lc2 = cross2.x+cross2.y+cross2.z
                 
+                if lc1 == 0:
+                    lc1 = 1
+                if lc2 == 0:
+                    lc2 = 1
                 crosscross = (cross1/lc1).cross(cross2/lc2)
                 if crosscross.to_tuple(2) == (0,0,0): #cross cross is very inaccurate
                     cross3 = v2.cross(v1)
                     lc3 = cross3.x+cross3.y+cross3.z
 
-                    if abs(lc3) > fprec:
-                        lc1 = cross1.x+cross1.y+cross1.z
-                        lc2 = cross2.x+cross2.y+cross2.z
-                        
+                    if abs(lc3) > fprec:                        
                         fac1 = lc2/lc3
                         fac2 = lc1/lc3
                         if 0 <= fac1 <= 1 and 0 <= fac2 <= 1:
-                            print(fac1, fac2, cross1, cross2)
                             rfac1 = round(fac1, precision)
                             rfac2 = round(fac2, precision)
                             set_ign = {ed2}
