@@ -84,6 +84,9 @@ def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
                 a2 = ed1.verts[1]
                 b1 = ed2.verts[0]
                 b2 = ed2.verts[1]
+                
+                if a1 in {b1, b2} or a2 in {b1, b2}:
+                    continue
 
                 v1 = a2.co-a1.co
                 v2 = b2.co-b1.co
@@ -91,19 +94,22 @@ def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
                 
                 cross1 = v3.cross(v1)
                 cross2 = v3.cross(v2)
+                lc1 = cross1.x+cross1.y+cross1.z
+                lc2 = cross2.x+cross2.y+cross2.z
                 
-                crosscross = cross1.cross(cross2)
+                crosscross = (cross1/lc1).cross(cross2/lc2)
                 if crosscross.to_tuple(2) == (0,0,0): #cross cross is very inaccurate
                     cross3 = v2.cross(v1)
                     lc3 = cross3.x+cross3.y+cross3.z
 
-                    if abs(lc3) > fprec: 
+                    if abs(lc3) > fprec:
                         lc1 = cross1.x+cross1.y+cross1.z
                         lc2 = cross2.x+cross2.y+cross2.z
                         
                         fac1 = lc2/lc3
                         fac2 = lc1/lc3
                         if 0 <= fac1 <= 1 and 0 <= fac2 <= 1:
+                            print(fac1, fac2, cross1, cross2)
                             rfac1 = round(fac1, precision)
                             rfac2 = round(fac2, precision)
                             set_ign = {ed2}
