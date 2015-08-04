@@ -22,13 +22,14 @@
 bl_info = {
     "name": "Push Pull Face",
     "author": "Germano Cavalcante",
-    "version": (0, 5),
+    "version": (0, 6),
     "blender": (2, 75, 0),
     "location": "View3D > TOOLS > Tools > Mesh Tools > Add: > Extrude Menu (Alt + E)",
     "description": "Push and pull face entities to sculpt 3d models",
     "wiki_url" : "http://blenderartists.org/forum/showthread.php?376618-Addon-Push-Pull-Face",
     "category": "Mesh"}
 
+print('--------------------------------------------------------------')
 import bpy
 import bmesh
 from mathutils import Vector
@@ -52,6 +53,24 @@ def intersect_bound_box_edge_edge(a1, a2, b1, b2, precision = 0.0001):
     else:
         return False
 
+def list_BVH(edges1, edges2, precision = 0.0001):
+    tmp_set1 = set()
+    tmp_set2 = set()
+    for ed1 in edges1:
+        for ed2 in edges2:
+            if ed1 != ed2:
+                a1 = ed1.verts[0].co
+                a2 = ed1.verts[1].co
+                b1 = ed2.verts[0].co
+                b2 = ed2.verts[1].co
+                intersect = intersect_bound_box_edge_edge(a1, a2, b1, b2, precision = precision)
+                if intersect:
+                    print('so')
+                    tmp_set1.add(ed1)
+                    tmp_set2.add(ed2)
+
+    return tmp_set1, tmp_set2
+
 def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
     fprec = .1**precision
     new_edges1 = set()
@@ -65,62 +84,62 @@ def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
                 a2 = ed1.verts[1]
                 b1 = ed2.verts[0]
                 b2 = ed2.verts[1]
-                intersect = intersect_bound_box_edge_edge(a1.co, a2.co, b1.co, b2.co, precision = fprec)
-                if intersect:
-                    v1 = a2.co-a1.co
-                    v2 = b2.co-b1.co
-                    v3 = a1.co-b1.co
-                    
-                    cross1 = v3.cross(v1)
-                    cross2 = v3.cross(v2)
-                    
-                    crosscross = cross1.cross(cross2)
-                    if crosscross.to_tuple(2) == (0,0,0): #cross cross is very inaccurate
-                        cross3 = v2.cross(v1)
-                        lc3 = cross3.x+cross3.y+cross3.z
 
-                        if abs(lc3) > fprec: 
-                            lc1 = cross1.x+cross1.y+cross1.z
-                            lc2 = cross2.x+cross2.y+cross2.z
-                            
-                            fac1 = lc2/lc3
-                            fac2 = lc1/lc3
-                            if 0 <= fac1 <= 1 and 0 <= fac2 <= 1:
-                                rfac1 = round(fac1, precision)
-                                rfac2 = round(fac2, precision)
-                                set_ign = {ed2}
+                v1 = a2.co-a1.co
+                v2 = b2.co-b1.co
+                v3 = a1.co-b1.co
+                
+                cross1 = v3.cross(v1)
+                cross2 = v3.cross(v2)
+                
+                crosscross = cross1.cross(cross2)
+                if crosscross.to_tuple(2) == (0,0,0): #cross cross is very inaccurate
+                    cross3 = v2.cross(v1)
+                    lc3 = cross3.x+cross3.y+cross3.z
 
-                                if 0 < rfac2 < 1:
-                                    ne2, nv2 = bmesh.utils.edge_split(ed2, b1, fac2)
-                                    new_edges2.update({ed2, ne2})
-                                    set_ign.add(ne2)
-                                elif rfac2 == 0:
-                                    nv2 = b1
-                                else:
-                                    nv2 = b2
+                    if abs(lc3) > fprec: 
+                        lc1 = cross1.x+cross1.y+cross1.z
+                        lc2 = cross2.x+cross2.y+cross2.z
+                        
+                        fac1 = lc2/lc3
+                        fac2 = lc1/lc3
+                        if 0 <= fac1 <= 1 and 0 <= fac2 <= 1:
+                            rfac1 = round(fac1, precision)
+                            rfac2 = round(fac2, precision)
+                            set_ign = {ed2}
 
-                                if 0 < rfac1 < 1:
-                                    ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
-                                    new_edges1.update({ed1, ne1})
-                                    exclude[ed1] = exclude[ne1] = set_ign
-                                elif rfac1 == 0:
-                                    nv1 = a1
-                                    exclude[ed1] = set_ign
-                                else:
-                                    nv1 = a2
-                                    exclude[ed1] = set_ign
+                            if 0 < rfac2 < 1:
+                                ne2, nv2 = bmesh.utils.edge_split(ed2, b1, fac2)
+                                new_edges2.update({ed2, ne2})
+                                set_ign.add(ne2)
+                            elif rfac2 == 0:
+                                nv2 = b1
+                            else:
+                                nv2 = b2
 
-                                if nv1 != nv2:
-                                    targetmap[nv1] = nv2
-                            #else:                            
-                                #print('not intersect')
-                        #else:
-                            #print('colinear')
+                            if 0 < rfac1 < 1:
+                                ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
+                                new_edges1.update({ed1, ne1})
+                                exclude[ed1] = exclude[ne1] = set_ign
+                            elif rfac1 == 0:
+                                nv1 = a1
+                                exclude[ed1] = set_ign
+                            else:
+                                nv1 = a2
+                                exclude[ed1] = set_ign
+
+                            if nv1 != nv2:
+                                targetmap[nv1] = nv2
+                        #else:                            
+                            #print('not intersect')
                     #else:
-                        #print('not coplanar')
+                        #print('colinear')
+                #else:
+                    #print('not coplanar')
     if new_edges1 or new_edges2:
-        edges1.update(new_edges1)
-        ned, tar = intersect_edges_edges(edges1, new_edges2, ignore = exclude, precision = precision)
+        #edges1.update(new_edges1)
+        edges2.update(new_edges2)
+        ned, tar = intersect_edges_edges(new_edges1, edges2, ignore = exclude, precision = precision)
         if tar != targetmap:
             new_edges1.update(ned["new_edges1"])
             new_edges2.update(ned["new_edges2"])
@@ -155,6 +174,7 @@ class Push_Pull_Face(bpy.types.Operator):
                     set_edges.add(ed)
             bm_edges = set(self.bm.edges)#.difference_update(set_edges)
             bm_edges.difference_update(set_edges)
+            set_edges, bm_edges = list_BVH(set_edges, bm_edges, precision = 0.0001)
             new_edges, targetmap = intersect_edges_edges(set_edges, bm_edges)
             if targetmap:
                 bmesh.ops.weld_verts(self.bm, targetmap=targetmap)
