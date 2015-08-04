@@ -64,7 +64,6 @@ def list_BVH(edges1, edges2, precision = 0.0001):
                 b2 = ed2.verts[1]
                 intersect = intersect_bound_box_edge_edge(a1.co, a2.co, b1.co, b2.co, precision = precision)
                 if intersect:
-                    print('so')
                     tmp_set1.add(ed1)
                     tmp_set2.add(ed2)
 
@@ -142,9 +141,9 @@ def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
                 #else:
                     #print('not coplanar')
     if new_edges1 or new_edges2:
-        #edges1.update(new_edges1)
+        edges1.update(new_edges1)
         edges2.update(new_edges2)
-        ned, tar = intersect_edges_edges(new_edges1, edges2, ignore = exclude, precision = precision)
+        ned, tar = intersect_edges_edges(edges1, edges2, ignore = exclude, precision = precision)
         if tar != targetmap:
             new_edges1.update(ned["new_edges1"])
             new_edges2.update(ned["new_edges2"])
@@ -173,6 +172,13 @@ class Push_Pull_Face(bpy.types.Operator):
         if op and op[-1].name == 'Translate':
             #print('-------------------')
             sface = self.bm.faces.active
+            if not sface:
+                for face in self.bm.faces:
+                    if face.select == True:
+                        sface = face
+                        break
+                else:
+                    return {'FINISHED'}
             set_edges = set()
             for v in sface.verts:
                 for ed in v.link_edges:
