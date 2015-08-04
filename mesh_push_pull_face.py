@@ -96,12 +96,12 @@ def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
                 lc1 = cross1.x+cross1.y+cross1.z
                 lc2 = cross2.x+cross2.y+cross2.z
                 
-                if lc1 == 0:
-                    lc1 = 1
-                if lc2 == 0:
-                    lc2 = 1
-                crosscross = (cross1/lc1).cross(cross2/lc2)
-                if crosscross.to_tuple(2) == (0,0,0): #cross cross is very inaccurate
+                if lc1 != 0 and lc2 != 0:
+                    coplanar = (cross1/lc1).cross(cross2/lc2).to_tuple(2) == (0,0,0) #cross cross is very inaccurate
+                else:
+                    coplanar = True
+                
+                if coplanar: 
                     cross3 = v2.cross(v1)
                     lc3 = cross3.x+cross3.y+cross3.z
 
