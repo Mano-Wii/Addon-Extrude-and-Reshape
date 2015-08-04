@@ -99,7 +99,7 @@ def intersect_edges_edges(edges1, edges2, ignore = {}, precision = 4):
                 if lc1 != 0 and lc2 != 0:
                     coplanar = (cross1/lc1).cross(cross2/lc2).to_tuple(2) == (0,0,0) #cross cross is very inaccurate
                 else:
-                    coplanar = True
+                    coplanar = (cross1).cross(cross2).to_tuple(2) == (0,0,0)
                 
                 if coplanar: 
                     cross3 = v2.cross(v1)
@@ -221,8 +221,7 @@ class Push_Pull_Face(bpy.types.Operator):
             dfaces = bmesh.ops.dissolve_edges(self.bm, edges = geom, use_verts=True, use_face_split=False)
             bmesh.update_edit_mesh(self.mesh, tessface=True, destructive=True)
             bpy.ops.transform.translate('INVOKE_DEFAULT', constraint_axis=(False, False, True), constraint_orientation='NORMAL', release_confirm=True)
-            self.face_id = sface.index
-        #return {'FINISHED'}
+
         rv3d = context.region_data
         rv3d.view_location = rv3d.view_location
         context.window_manager.modal_handler_add(self)
