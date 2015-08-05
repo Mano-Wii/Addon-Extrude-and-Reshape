@@ -31,41 +31,37 @@ bl_info = {
 
 import bpy
 import bmesh
-from mathutils import Vector
+#from mathutils import Vector
 from bpy.props import FloatProperty
 
-def intersect_bound_box_edge_edge(a1, a2, b1, b2, precision = 0.0001):
-    bbx1 = sorted([a1[0], a2[0]])
-    bbx2 = sorted([b1[0], b2[0]])
-    if ((bbx1[0] - precision) <= bbx2[1]) and (bbx1[1] >= (bbx2[0] - precision)):
-        bby1 = sorted([a1[1], a2[1]])
-        bby2 = sorted([b1[1], b2[1]])
-        if ((bby1[0] - precision) <= bby2[1]) and (bby1[1] >= (bby2[0] - precision)):
-            bbz1 = sorted([a1[2], a2[2]])
-            bbz2 = sorted([b1[2], b2[2]])
-            if ((bbz1[0] - precision) <= bbz2[1]) and (bbz1[1] >= (bbz2[0] - precision)):
-                return True
-            else:
-                return False
-        else:
-            return False
-    else:
-        return False
-
-def list_BVH(edges1, edges2, precision = 0.0001):
+def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
+    aco = [(v1.co,v2.co) for v1,v2 in [e.verts for e in edges1]]
+    bco = [(v1.co,v2.co) for v1,v2 in [e.verts for e in edges2]]
     tmp_set1 = set()
     tmp_set2 = set()
-    for ed1 in edges1:
-        for ed2 in edges2:
+    for i1, ed1 in enumerate(aco):
+        for i2, ed2 in enumerate(bco):
             if ed1 != ed2:
-                a1 = ed1.verts[0]
-                a2 = ed1.verts[1]
-                b1 = ed2.verts[0]
-                b2 = ed2.verts[1]
-                intersect = intersect_bound_box_edge_edge(a1.co, a2.co, b1.co, b2.co, precision = precision)
-                if intersect:
-                    tmp_set1.add(ed1)
-                    tmp_set2.add(ed2)
+                a1, a2 = ed1
+                b1, b2 = ed2
+
+                a1x, a2x = a1.x, a2.x
+                b1x, b2x = b1.x, b2.x
+                bbx1 = (a1x, a2x) if a1x < a2x else (a2x, a1x)
+                bbx2 = (b1x, b2x) if b1x < b2x else (b2x, b1x)
+                if ((bbx1[0] - precision) <= bbx2[1]) and (bbx1[1] >= (bbx2[0] - precision)):
+                    a1y, a2y = a1.y, a2.y
+                    b1y, b2y = b1.y, b2.y
+                    bby1 = (a1y, a2y) if a1y < a2y else (a2y, a1y)
+                    bby2 = (b1y, b2y) if b1y < b2y else (b2y, b1y)
+                    if ((bby1[0] - precision) <= bby2[1]) and (bby1[1] >= (bby2[0] - precision)):
+                        a1z, a2z = a1.z, a2.z
+                        b1z, b2z = b1.z, b2.z
+                        bbz1 = (a1z, a2z) if a1z < a2z else (a2z, a1z)
+                        bbz2 = (b1z, b2z) if b1z < b2z else (b2z, b1z)
+                        if ((bbz1[0] - precision) <= bbz2[1]) and (bbz1[1] >= (bbz2[0] - precision)):
+                            tmp_set1.add(edges1[i1])
+                            tmp_set2.add(edges2[i2])
 
     return tmp_set1, tmp_set2
 
@@ -179,13 +175,14 @@ class Push_Pull_Face(bpy.types.Operator):
                         break
                 else:
                     return {'FINISHED'}
-            set_edges = set()
+            edges = set()
             for v in sface.verts:
                 for ed in v.link_edges:
-                    set_edges.add(ed)
-            bm_edges = set(self.bm.edges)#.difference_update(set_edges)
-            bm_edges.difference_update(set_edges)
-            set_edges, bm_edges = list_BVH(set_edges, bm_edges, precision = 0.0001)
+                    edges.add(ed)
+            edges = list(edges)
+            bm_edges = self.bm.edges
+            #bm_edges.difference_update(set_edges)
+            set_edges, bm_edges = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
             new_edges, targetmap = intersect_edges_edges(set_edges, bm_edges)
             if targetmap:
                 bmesh.ops.weld_verts(self.bm, targetmap=targetmap)
