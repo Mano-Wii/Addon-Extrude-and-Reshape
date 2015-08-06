@@ -49,17 +49,17 @@ def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
                 b1x, b2x = b1.x, b2.x
                 bbx1 = (a1x, a2x) if a1x < a2x else (a2x, a1x)
                 bbx2 = (b1x, b2x) if b1x < b2x else (b2x, b1x)
-                if ((bbx1[0] - precision) <= bbx2[1]) and (bbx1[1] >= (bbx2[0] - precision)):
+                if (bbx1[0] - precision) <= bbx2[1] and bbx1[1] >= (bbx2[0] - precision):
                     a1y, a2y = a1.y, a2.y
                     b1y, b2y = b1.y, b2.y
                     bby1 = (a1y, a2y) if a1y < a2y else (a2y, a1y)
                     bby2 = (b1y, b2y) if b1y < b2y else (b2y, b1y)
-                    if ((bby1[0] - precision) <= bby2[1]) and (bby1[1] >= (bby2[0] - precision)):
+                    if (bby1[0] - precision) <= bby2[1] and bby1[1] >= (bby2[0] - precision):
                         a1z, a2z = a1.z, a2.z
                         b1z, b2z = b1.z, b2.z
                         bbz1 = (a1z, a2z) if a1z < a2z else (a2z, a1z)
                         bbz2 = (b1z, b2z) if b1z < b2z else (b2z, b1z)
-                        if ((bbz1[0] - precision) <= bbz2[1]) and (bbz1[1] >= (bbz2[0] - precision)):
+                        if (bbz1[0] - precision) <= bbz2[1] and bbz1[1] >= (bbz2[0] - precision):
                             tmp_set1.add(edges1[i1])
                             tmp_set2.add(edges2[i2])
 
@@ -160,13 +160,10 @@ class Push_Pull_Face(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.mode is not 'EDIT_MESH'
+        return  context.mode is not 'EDIT_MESH'
 
     def modal(self, context, event):
-        op = context.window_manager.operators
-        #print([o.name for o in op])
-        if op and op[-1].name == 'Translate':
-            #print('-------------------')
+        if self.confirm:
             sface = self.bm.faces.active
             if not sface:
                 for face in self.bm.faces:
@@ -191,13 +188,14 @@ class Push_Pull_Face(bpy.types.Operator):
         if self.cancel:
             return {'FINISHED'}
         self.cancel = event.type == 'ESC'
+        self.confirm = event.type == 'LEFTMOUSE'
         return {'PASS_THROUGH'}
 
     def execute(self, context):
         self.mesh = context.object.data
         self.bm = bmesh.from_edit_mesh(self.mesh)
         try:
-            selection = self.bm.select_history[0]
+            selection = self.bm.select_history[-1]
         except:
             for face in self.bm.faces:
                 if face.select == True:
@@ -210,13 +208,15 @@ class Push_Pull_Face(bpy.types.Operator):
             return {'FINISHED'}
         else:
             face = selection
+            #face.select = False
+            bpy.ops.mesh.select_all(action='DESELECT')
             geom = []
             for edge in face.edges:
                 if abs(edge.calc_face_angle(0) - 1.5707963267948966) < 0.01: #self.angle_tolerance:
                     geom.append(edge)
 
             dict = bmesh.ops.extrude_discrete_faces(self.bm, faces = [face])
-            bpy.ops.mesh.select_all(action='DESELECT')
+            
             for face in dict['faces']:
                 self.bm.faces.active = face
                 face.select = True
@@ -225,11 +225,10 @@ class Push_Pull_Face(bpy.types.Operator):
             bmesh.update_edit_mesh(self.mesh, tessface=True, destructive=True)
             bpy.ops.transform.translate('INVOKE_DEFAULT', constraint_axis=(False, False, True), constraint_orientation='NORMAL', release_confirm=True)
 
-        rv3d = context.region_data
-        rv3d.view_location = rv3d.view_location
         context.window_manager.modal_handler_add(self)
 
         self.cancel = False
+        self.confirm = False
         return {'RUNNING_MODAL'}
 
 def operator_draw(self,context):
