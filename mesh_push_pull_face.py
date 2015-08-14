@@ -179,8 +179,8 @@ class Push_Pull_Face(bpy.types.Operator):
             edges = list(edges)
             bm_edges = self.bm.edges
             #bm_edges.difference_update(set_edges)
-            set_edges, bm_edges = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
-            new_edges, targetmap = intersect_edges_edges(set_edges, bm_edges)
+            set_edges, bm_edges = edges_BVH_overlap(edges, bm_edges, precision = 0.001)
+            new_edges, targetmap = intersect_edges_edges(set_edges, bm_edges, precision = 4)
             if targetmap:
                 bmesh.ops.weld_verts(self.bm, targetmap=targetmap)
             bmesh.update_edit_mesh(self.mesh, tessface=True, destructive=True)
