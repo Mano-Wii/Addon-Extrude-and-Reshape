@@ -22,7 +22,7 @@
 bl_info = {
     "name": "Push Pull Face",
     "author": "Germano Cavalcante",
-    "version": (0, 9),
+    "version": (0, 7),
     "blender": (2, 75, 0),
     "location": "View3D > TOOLS > Tools > Mesh Tools > Add: > Extrude Menu (Alt + E)",
     "description": "Push and pull face entities to sculpt 3d models",
@@ -184,6 +184,7 @@ class IntersectEdges(Operator):
 
         # bvh_partial
         linked_faces = [[f for f in edge.link_faces if f != sface][0] for edge in sface.edges]
+        linked_faces.append(sface)
         verts = []
         [[verts.append(v) for v in f.verts if v not in verts] for f in linked_faces]
         polygons = [[verts.index(v) for v in f.verts] for f in linked_faces]
