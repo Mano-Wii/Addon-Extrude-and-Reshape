@@ -228,12 +228,14 @@ class Push_Pull_Face(bpy.types.Operator):
                         break
                 else:
                     return {'FINISHED'}
+            # edges to intersect
             edges = set()
-            for v in sface.verts:
-                for ed in v.link_edges:
-                    edges.add(ed)
+            [[edges.add(ed) for ed in v.link_edges] for v in sface.verts]
             edges = list(edges)
+
+            #edges to test intersect
             bm_edges = self.bm.edges
+
             set_edges, bm_edges, overlay = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
             overlay = {k: v.difference(overlay) for k,v in overlay.items()} # remove repetition
             #for a, b in overlay.items():
@@ -256,8 +258,8 @@ class Push_Pull_Face(bpy.types.Operator):
             return {'FINISHED'}
         if self.cancel:
             return {'FINISHED'}
-        self.cancel = event.type == 'ESC'
-        self.confirm = event.type == 'LEFTMOUSE'
+        self.cancel = event.type in {'ESC', 'NDOF_BUTTON_ESC'}
+        self.confirm = event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'}
         return {'PASS_THROUGH'}
 
     def execute(self, context):
