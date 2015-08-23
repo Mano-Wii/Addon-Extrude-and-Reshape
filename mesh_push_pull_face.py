@@ -228,21 +228,49 @@ class Push_Pull_Face(bpy.types.Operator):
                         break
                 else:
                     return {'FINISHED'}
+
+            #### Using new module BVHTree to get overlap ####
+            from mathutils.bvhtree import BVHTree
+            # bvh_full
+            bvh_full = BVHTree.FromBMesh(self.bm)
+
+            # bvh_partial
+            linked_faces = [[f for f in edge.link_faces if f != sface][0] for edge in sface.edges]
+            linked_faces.append(sface)
+            verts = []
+            [[verts.append(v) for v in f.verts if v not in verts] for f in linked_faces]
+            polygons = [[verts.index(v) for v in f.verts] for f in linked_faces]
+            verts = [v.co for v in verts]
+            bvh_partial = BVHTree.FromPolygons(verts, polygons, epsilon=0.0)
+            
+            # overlap
+            overlap = bvh_partial.overlap(bvh_full)
+            #print(overlap)
+            #### Ending the use of the new module BVHTree ####
+
+            # edges to intersect
             edges = set()
-            for v in sface.verts:
-                for ed in v.link_edges:
-                    edges.add(ed)
+            [[edges.add(ed) for ed in v.link_edges] for v in sface.verts]
             edges = list(edges)
-            bm_edges = self.bm.edges
+
+            #edges to test intersect
+            bm_edges = set()
+            for _, f in overlap:
+                for eds in self.bm.faces[f].edges:
+                    bm_edges.add(eds)
+            bm_edges = list(bm_edges)
+
+            # test bvh_intersect between edges to further reduce
             set_edges, bm_edges, overlay = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
-            overlay = {k: v.difference(overlay) for k,v in overlay.items()} # remove repetition
-            #for a, b in overlay.items():
-                #print(a.index, [e.index for e in b])
+            
+            # remove repetition
+            overlay = {k: v.difference(overlay) for k,v in overlay.items()}
+
+            # add vertices where intersect
             new_edges1, new_edges2, targetmap = intersect_edges_edges(overlay)
             if targetmap:
                 bmesh.ops.weld_verts(self.bm, targetmap=targetmap)
-            #print([e.is_valid for e in new_edges1])
-            #print([e.is_valid for e in new_edges2])
+
             for e in new_edges2:
                 lfe = set(e.link_faces)
                 v1, v2 = e.verts
