@@ -22,7 +22,7 @@
 bl_info = {
     "name": "Push Pull Face",
     "author": "Germano Cavalcante",
-    "version": (0, 6),
+    "version": (0, 7),
     "blender": (2, 75, 0),
     "location": "View3D > TOOLS > Tools > Mesh Tools > Add: > Extrude Menu (Alt + E)",
     "description": "Push and pull face entities to sculpt 3d models",
@@ -72,127 +72,118 @@ def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
 
     return tmp_set1, tmp_set2, overlay
 
-def intersect_edges_edges(overlay, ignore = {}, precision = 4):
-    sp = 0
+def intersect_edges_edges(overlay, precision = 4):
     fprec = .1**precision
+    fpre_min = -fprec
+    fpre_max = 1+fprec
     splits = {}
     sp_get = splits.get
+    ignore = {}
+    ig_get = ignore.get
     new_edges1 = set()
     new_edges2 = set()
     targetmap = {}
-    exclude = {}
-    get = ignore.get
     for edg1 in overlay:
-        #print(sp, edg1.index)
-        sp = 0
-        splits[edg1] = set()
-        while len(overlay[edg1]) > sp: #.difference(splits[edg1]):
-            ed1 = edg1
-            fi = True
-            for ed2 in overlay[edg1].difference(splits[edg1]):
-                # test if repeats
-                #if ed2 not in get(ed1, set()):
-                a1 = ed1.verts[0] # to do check ed1
-                a2 = ed1.verts[1] # to do check ed1
-                b1 = ed2.verts[0]
-                b2 = ed2.verts[1]
-                
-                # test if are linked
-                if a1 in {b1, b2} or a2 in {b1, b2}:
-                    sp += 1
-                    continue
-                #print('oi')
+        sp_back = ()
+        sp_loop = set()
+        while sp_back != sp_get(edg1, set()):
+            sp_loop = sp_get(edg1, {edg1}).difference(sp_back)
+            sp_back = sp_get(edg1, set())
+            for ed1 in sp_loop:
+                for ed2 in overlay[edg1].difference(ig_get(edg1, set())):
+                    a1 = ed1.verts[0] # to do check ed1
+                    a2 = ed1.verts[1] # to do check ed1
+                    b1 = ed2.verts[0]
+                    b2 = ed2.verts[1]
+                    
+                    # test if are linked
+                    if a1 in {b1, b2} or a2 in {b1, b2}:
+                        ignore[edg1] = ig_get(edg1, set()).union({ed2})
+                        continue
 
-                v1 = a2.co-a1.co
-                v2 = b2.co-b1.co
-                v3 = a1.co-b1.co
-                
-                cross1 = v3.cross(v1)
-                cross2 = v3.cross(v2)
-                lc1 = cross1.x+cross1.y+cross1.z
-                lc2 = cross2.x+cross2.y+cross2.z
-                
-                try:
-                    coplanar = (cross1/lc1).cross(cross2/lc2).to_tuple(2) == (0,0,0) #cross cross is very inaccurate
-                except ZeroDivisionError:
-                    coplanar = (cross1).cross(cross2).to_tuple(2) == (0,0,0)
-                
-                if coplanar:
-                    cross3 = v2.cross(v1)
-                    lc3 = cross3.x+cross3.y+cross3.z
+                    v1 = a2.co-a1.co
+                    v2 = b2.co-b1.co
+                    v3 = a1.co-b1.co
+                    
+                    cross1 = v3.cross(v1)
+                    cross2 = v3.cross(v2)
+                    lc1 = cross1.x+cross1.y+cross1.z
+                    lc2 = cross2.x+cross2.y+cross2.z
+                    
+                    try:
+                        coplanar = (cross1/lc1).cross(cross2/lc2).to_tuple(2) == (0,0,0) #cross cross is very inaccurate
+                    except ZeroDivisionError:
+                        coplanar = (cross1).cross(cross2).to_tuple(2) == (0,0,0)
+                    
+                    if coplanar:
+                        cross3 = v2.cross(v1)
+                        lc3 = cross3.x+cross3.y+cross3.z
 
-                    # test if are colinear (coliner is ignored)
-                    if abs(lc3) > fprec:
-                        fac1 = lc2/lc3
-                        fac2 = lc1/lc3
-                        
-                        # finally tests if intersect
-                        if 0 <= fac1 <= 1 and 0 <= fac2 <= 1: # Use while?
-                            pass
-                        elif ed2 in splits:
-                            for ed2 in splits[ed2]:
-                                b1 = ed2.verts[0]
-                                b2 = ed2.verts[1]
-
-                                v2 = b2.co-b1.co
-                                v3 = a1.co-b1.co
-
-                                cross1 = v3.cross(v1)
-                                cross2 = v3.cross(v2)
-                                cross3 = v2.cross(v1)
-
-                                lc1 = cross1.x+cross1.y+cross1.z
-                                lc2 = cross2.x+cross2.y+cross2.z
-                                lc3 = cross3.x+cross3.y+cross3.z
-
-                                fac1 = lc2/lc3
-                                fac2 = lc1/lc3
-
-                                if 0 <= fac1 <= 1 and 0 <= fac2 <= 1: # Use while?
-                                    break
-                            else:
-                                #print('not intersect2')
-                                if fi:
-                                    sp += 1
-                                continue
-                        else:
-                            #print('not intersect')
-                            if fi:
-                                sp += 1
-                            continue
+                        # test if are colinear (coliner is ignored)
+                        if abs(lc3) > fprec:
+                            fac1 = lc2/lc3
+                            fac2 = lc1/lc3
                             
-                        rfac1 = round(fac1, precision)
-                        rfac2 = round(fac2, precision)
-                        sp += 1
+                            # finally tests if intersect
+                            if fpre_min <= fac1 <= fpre_max and\
+                               fpre_min <= fac2 <= fpre_max:
+                                pass
+                            elif ed2 in splits:
+                                for ed2 in splits[ed2]:
+                                    b1 = ed2.verts[0]
+                                    b2 = ed2.verts[1]
 
-                        if 0 < rfac1 < 1:
-                            ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
-                            new_edges1.update({ed1, ne1})
-                            splits[ed1] = sp_get(ed1, set()).union({ne1})
-                            ed1 = ne1
-                            fi = False
-                        elif rfac1 == 0:
-                            nv1 = a1
-                        else:
-                            nv1 = a2
+                                    v2 = b2.co-b1.co
+                                    v3 = a1.co-b1.co
 
-                        if 0 < rfac2 < 1:
-                            ne2, nv2 = bmesh.utils.edge_split(ed2, b1, fac2)
-                            new_edges2.update({ed2, ne2})
-                            splits[ed2] = sp_get(ed2, set()).union({ne2})
-                        elif rfac2 == 0:
-                            nv2 = b1
-                        else:
-                            nv2 = b2
+                                    cross1 = v3.cross(v1)
+                                    cross2 = v3.cross(v2)
+                                    cross3 = v2.cross(v1)
 
-                        if nv1 != nv2: # test unnecessary!!!
-                            targetmap[nv1] = nv2
-                    elif fi:
-                        sp += 1
-                        #print('colinear')
-                elif fi:
-                    sp += 1
-                    #print('not coplanar')
+                                    lc1 = cross1.x+cross1.y+cross1.z
+                                    lc2 = cross2.x+cross2.y+cross2.z
+                                    lc3 = cross3.x+cross3.y+cross3.z
+
+                                    fac1 = lc2/lc3
+                                    fac2 = lc1/lc3
+
+                                    if fpre_min <= fac1 <= fpre_max and\
+                                       fpre_min <= fac2 <= fpre_max:
+                                        break
+                                else:
+                                    continue
+                            else:
+                                continue
+                                
+                            rfac1 = round(fac1, precision)
+                            rfac2 = round(fac2, precision)
+                            ignore[edg1] = ig_get(edg1, set()).union({ed2})
+
+                            if 0 < rfac1 < 1:
+                                ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
+                                new_edges1.update({ed1, ne1})
+                                splits[edg1] = sp_get(edg1, set()).union({ne1})
+                                fi = False
+                            elif rfac1 == 0:
+                                nv1 = a1
+                            else:
+                                nv1 = a2
+
+                            if 0 < rfac2 < 1:
+                                ne2, nv2 = bmesh.utils.edge_split(ed2, b1, fac2)
+                                new_edges2.update({ed2, ne2})
+                                splits[ed2] = sp_get(ed2, set()).union({ne2})
+                            elif rfac2 == 0:
+                                nv2 = b1
+                            else:
+                                nv2 = b2
+
+                            if nv1 != nv2: # test unnecessary!!!
+                                targetmap[nv1] = nv2
+                        #else:
+                            #print('colinear')
+                    #else:
+                        #print('not coplanar')
 
     return new_edges1, new_edges2, targetmap
 
@@ -224,11 +215,13 @@ class Push_Pull_Face(bpy.types.Operator):
             bm_edges = self.bm.edges
             set_edges, bm_edges, overlay = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
             overlay = {k: v.difference(overlay) for k,v in overlay.items()} # remove repetition
+            #for a, b in overlay.items():
+                #print(a.index, [e.index for e in b])
             new_edges1, new_edges2, targetmap = intersect_edges_edges(overlay)
             if targetmap:
                 bmesh.ops.weld_verts(self.bm, targetmap=targetmap)
-            print([e.is_valid for e in new_edges1])
-            print([e.is_valid for e in new_edges2])
+            #print([e.is_valid for e in new_edges1])
+            #print([e.is_valid for e in new_edges2])
             for e in new_edges2:
                 lfe = set(e.link_faces)
                 v1, v2 = e.verts
