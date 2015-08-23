@@ -107,17 +107,27 @@ def intersect_edges_edges(overlay, precision = 4):
                     
                     cross1 = v3.cross(v1)
                     cross2 = v3.cross(v2)
-                    lc1 = cross1.x+cross1.y+cross1.z
-                    lc2 = cross2.x+cross2.y+cross2.z
-                    
+                    x,y,z = abs(cross1.x), abs(cross1.y), abs(cross1.z)
+                    lc1 = cross1.x if x >= y and x >= z else\
+                          cross1.y if y >= x and y >= z else\
+                          cross1.z
+
+                    x,y,z = abs(cross2.x), abs(cross2.y), abs(cross2.z)
+                    lc2 = cross2.x if x >= y and x >= z else\
+                          cross2.y if y >= x and y >= z else\
+                          cross2.z
+
                     try:
-                        coplanar = (cross1/lc1).cross(cross2/lc2).to_tuple(2) == (0,0,0) #cross cross is very inaccurate
-                    except ZeroDivisionError:
-                        coplanar = (cross1).cross(cross2).to_tuple(2) == (0,0,0)
+                        coplanar = (cross1/lc1).cross(cross2/lc2).to_tuple(precision) == (0,0,0) #cross cross is very inaccurate
+                    except ZeroDivisionError: # never?
+                        coplanar = (cross1).cross(cross2).to_tuple(precision) == (0,0,0)
                     
                     if coplanar:
                         cross3 = v2.cross(v1)
-                        lc3 = cross3.x+cross3.y+cross3.z
+                        x,y,z = abs(cross3.x), abs(cross3.y), abs(cross3.z)
+                        lc3 = cross3.x if x >= y and x >= z else\
+                              cross3.y if y >= x and y >= z else\
+                              cross3.z
 
                         # test if are colinear (coliner is ignored)
                         if abs(lc3) > fprec:
@@ -140,9 +150,20 @@ def intersect_edges_edges(overlay, precision = 4):
                                     cross2 = v3.cross(v2)
                                     cross3 = v2.cross(v1)
 
-                                    lc1 = cross1.x+cross1.y+cross1.z
-                                    lc2 = cross2.x+cross2.y+cross2.z
-                                    lc3 = cross3.x+cross3.y+cross3.z
+                                    x,y,z = abs(cross1.x), abs(cross1.y), abs(cross1.z)
+                                    lc1 = cross1.x if x >= y and x >= z else\
+                                          cross1.y if y >= x and y >= z else\
+                                          cross1.z
+
+                                    x,y,z = abs(cross2.x), abs(cross2.y), abs(cross2.z)
+                                    lc2 = cross2.x if x >= y and x >= z else\
+                                          cross2.y if y >= x and y >= z else\
+                                          cross2.z
+
+                                    x,y,z = abs(cross3.x), abs(cross3.y), abs(cross3.z)
+                                    lc3 = cross3.x if x >= y and x >= z else\
+                                          cross3.y if y >= x and y >= z else\
+                                          cross3.z
 
                                     fac1 = lc2/lc3
                                     fac2 = lc1/lc3
