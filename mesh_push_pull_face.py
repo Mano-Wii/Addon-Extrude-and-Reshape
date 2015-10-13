@@ -184,7 +184,6 @@ def intersect_edges_edges(overlay, precision = 4):
                                 ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
                                 new_edges1.update({ed1, ne1})
                                 splits[edg1] = sp_get(edg1, set()).union({ne1})
-                                fi = False
                             elif rfac1 == 0:
                                 nv1 = a1
                             else:
@@ -284,8 +283,8 @@ class Push_Pull_Face(bpy.types.Operator):
             return {'FINISHED'}
         if self.cancel:
             return {'FINISHED'}
-        self.cancel = event.type == 'ESC'
-        self.confirm = event.type == 'LEFTMOUSE'
+        self.cancel = event.type in {'ESC', 'NDOF_BUTTON_ESC'}
+        self.confirm = event.type in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER'}
         return {'PASS_THROUGH'}
 
     def execute(self, context):
