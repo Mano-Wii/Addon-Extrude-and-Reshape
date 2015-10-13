@@ -184,7 +184,6 @@ def intersect_edges_edges(overlay, precision = 4):
                                 ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
                                 new_edges1.update({ed1, ne1})
                                 splits[edg1] = sp_get(edg1, set()).union({ne1})
-                                fi = False
                             elif rfac1 == 0:
                                 nv1 = a1
                             else:
