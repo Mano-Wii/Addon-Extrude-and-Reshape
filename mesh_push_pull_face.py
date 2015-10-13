@@ -39,8 +39,8 @@ def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
     l2 = [e.verts for e in edges2]
     aco = [(v1.co,v2.co) for v1,v2 in l1]
     bco = [(v1.co,v2.co) for v1,v2 in l2]
-    tmp_set1 = set()
-    tmp_set2 = set()
+    #tmp_set1 = set()
+    #tmp_set2 = set()
     overlay = {}
     oget = overlay.get
     for i1, ed1 in enumerate(aco):
@@ -65,12 +65,11 @@ def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
                         bbz2 = (b1z, b2z) if b1z < b2z else (b2z, b1z)
                         if (bbz1[0] - precision) <= bbz2[1] and bbz1[1] >= (bbz2[0] - precision):
                             e1 = edges1[i1]
-                            tmp_set1.add(e1)
-                            tmp_set2.add(edges2[i2])
+                            #tmp_set1.add(e1)
+                            #tmp_set2.add(edges2[i2])
                             #overlay[e1.index] = oget(e1.index, set()).union({edges2[i2].index})
                             overlay[e1] = oget(e1, set()).union({edges2[i2]})
-
-    return tmp_set1, tmp_set2, overlay
+    return overlay
 
 def intersect_edges_edges(overlay, precision = 4):
     fprec = .1**precision
@@ -235,15 +234,31 @@ class Push_Pull_Face(bpy.types.Operator):
             #edges to test intersect
             bm_edges = self.bm.edges
 
-            set_edges, bm_edges, overlay = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
+            overlay = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
             overlay = {k: v.difference(overlay) for k,v in overlay.items()} # remove repetition
             #for a, b in overlay.items():
                 #print(a.index, [e.index for e in b])
             new_edges1, new_edges2, targetmap = intersect_edges_edges(overlay)
+            pos_weld = set()
+            for e in new_edges1:
+                v1, v2 = e.verts
+                if v1 in targetmap and v2 in targetmap:
+                    pos_weld.add((targetmap[v1], targetmap[v2]))
             if targetmap:
                 bmesh.ops.weld_verts(self.bm, targetmap=targetmap)
             #print([e.is_valid for e in new_edges1])
             #print([e.is_valid for e in new_edges2])
+            for e in pos_weld:
+                v1, v2 = e
+                lf1 = set(v1.link_faces)
+                lf2 = set(v2.link_faces)
+                rlfe = lf1.intersection(lf2)
+                for f in rlfe:
+                    try:
+                        bmesh.utils.face_split(f, v1, v2)
+                    except:
+                        pass
+                
             for e in new_edges2:
                 lfe = set(e.link_faces)
                 v1, v2 = e.verts
