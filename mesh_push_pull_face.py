@@ -22,8 +22,8 @@
 bl_info = {
     "name": "Push Pull Face",
     "author": "Germano Cavalcante",
-    "version": (0, 8),
-    "blender": (2, 76, 0),
+    "version": (0, 7),
+    "blender": (2, 75, 0),
     "location": "View3D > TOOLS > Tools > Mesh Tools > Add: > Extrude Menu (Alt + E)",
     "description": "Push and pull face entities to sculpt 3d models",
     "wiki_url" : "http://blenderartists.org/forum/showthread.php?376618-Addon-Push-Pull-Face",
@@ -35,12 +35,12 @@ import bmesh
 from bpy.props import FloatProperty
 
 def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
-    #l1 = [e.verts for e in edges1]
-    #l2 = [e.verts for e in edges2]
-    #aco = [(v1.co,v2.co) for v1,v2 in l1]
-    #bco = [(v1.co,v2.co) for v1,v2 in l2]
-    aco = ([v.co for v in e.verts] for e in edges1)
-    bco = [[v.co for v in e.verts] for e in edges2]
+    l1 = [e.verts for e in edges1]
+    l2 = [e.verts for e in edges2]
+    aco = [(v1.co,v2.co) for v1,v2 in l1]
+    bco = [(v1.co,v2.co) for v1,v2 in l2]
+    #tmp_set1 = set()
+    #tmp_set2 = set()
     overlay = {}
     oget = overlay.get
     for i1, ed1 in enumerate(aco):
@@ -65,6 +65,9 @@ def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
                         bbz2 = (b1z, b2z) if b1z < b2z else (b2z, b1z)
                         if (bbz1[0] - precision) <= bbz2[1] and bbz1[1] >= (bbz2[0] - precision):
                             e1 = edges1[i1]
+                            #tmp_set1.add(e1)
+                            #tmp_set2.add(edges2[i2])
+                            #overlay[e1.index] = oget(e1.index, set()).union({edges2[i2].index})
                             overlay[e1] = oget(e1, set()).union({edges2[i2]})
     return overlay
 
@@ -86,10 +89,7 @@ def intersect_edges_edges(overlay, precision = 4):
             sp_loop = sp_get(edg1, {edg1}).difference(sp_back)
             sp_back = sp_get(edg1, set())
             for ed1 in sp_loop:
-                #print('-->', edg1.index)
                 for ed2 in overlay[edg1].difference(ig_get(edg1, set())):
-                    #print('loop', ed2.index)
-
                     a1 = ed1.verts[0] # to do check ed1
                     a2 = ed1.verts[1] # to do check ed1
                     b1 = ed2.verts[0]
@@ -98,7 +98,6 @@ def intersect_edges_edges(overlay, precision = 4):
                     # test if are linked
                     if a1 in {b1, b2} or a2 in {b1, b2}:
                         ignore[edg1] = ig_get(edg1, set()).union({ed2})
-                        #print('linked')
                         continue
 
                     v1 = a2.co-a1.co
@@ -129,7 +128,7 @@ def intersect_edges_edges(overlay, precision = 4):
                               cross3.y if y >= x and y >= z else\
                               cross3.z
 
-                        # test if are colinear (colinear is ignored)
+                        # test if are colinear (coliner is ignored)
                         if abs(lc3) > fprec:
                             fac1 = lc2/lc3
                             fac2 = lc1/lc3
@@ -137,54 +136,44 @@ def intersect_edges_edges(overlay, precision = 4):
                             # finally tests if intersect
                             if fpre_min <= fac1 <= fpre_max and\
                                fpre_min <= fac2 <= fpre_max:
-                                #print(edg1.index, 'intersect', ed2.index)
-                                edg2 = ed2
                                 pass
-                            else:
-                                #print(edg1.index, 'not intersect', ed2.index)
-                                ignore[edg1] = ig_get(edg1, set()).union({ed2})
-                                if ed2 in splits:
-                                    for edg2 in splits[ed2]:
-                                        b1 = edg2.verts[0]
-                                        b2 = edg2.verts[1]
+                            elif ed2 in splits:
+                                for ed2 in splits[ed2]:
+                                    b1 = ed2.verts[0]
+                                    b2 = ed2.verts[1]
 
-                                        v2 = b2.co-b1.co
-                                        v3 = a1.co-b1.co
+                                    v2 = b2.co-b1.co
+                                    v3 = a1.co-b1.co
 
-                                        cross1 = v3.cross(v1)
-                                        cross2 = v3.cross(v2)
-                                        cross3 = v2.cross(v1)
+                                    cross1 = v3.cross(v1)
+                                    cross2 = v3.cross(v2)
+                                    cross3 = v2.cross(v1)
 
-                                        x,y,z = abs(cross1.x), abs(cross1.y), abs(cross1.z)
-                                        lc1 = cross1.x if x >= y and x >= z else\
-                                              cross1.y if y >= x and y >= z else\
-                                              cross1.z
+                                    x,y,z = abs(cross1.x), abs(cross1.y), abs(cross1.z)
+                                    lc1 = cross1.x if x >= y and x >= z else\
+                                          cross1.y if y >= x and y >= z else\
+                                          cross1.z
 
-                                        x,y,z = abs(cross2.x), abs(cross2.y), abs(cross2.z)
-                                        lc2 = cross2.x if x >= y and x >= z else\
-                                              cross2.y if y >= x and y >= z else\
-                                              cross2.z
+                                    x,y,z = abs(cross2.x), abs(cross2.y), abs(cross2.z)
+                                    lc2 = cross2.x if x >= y and x >= z else\
+                                          cross2.y if y >= x and y >= z else\
+                                          cross2.z
 
-                                        x,y,z = abs(cross3.x), abs(cross3.y), abs(cross3.z)
-                                        lc3 = cross3.x if x >= y and x >= z else\
-                                              cross3.y if y >= x and y >= z else\
-                                              cross3.z
+                                    x,y,z = abs(cross3.x), abs(cross3.y), abs(cross3.z)
+                                    lc3 = cross3.x if x >= y and x >= z else\
+                                          cross3.y if y >= x and y >= z else\
+                                          cross3.z
 
-                                        fac1 = lc2/lc3
-                                        fac2 = lc1/lc3
+                                    fac1 = lc2/lc3
+                                    fac2 = lc1/lc3
 
-                                        if fpre_min <= fac1 <= fpre_max and\
-                                           fpre_min <= fac2 <= fpre_max:
-                                            #print(edg1.index, 'intersect', edg2.index)
-                                            break
-                                        #else:
-                                            #print(edg1.index, 'not intersect', edg2.index)
-                                    else:
-                                        #print(edg1.index, 'not intersect none')
-                                        continue
+                                    if fpre_min <= fac1 <= fpre_max and\
+                                       fpre_min <= fac2 <= fpre_max:
+                                        break
                                 else:
-                                    #print(edg1.index, 'not intersect', ed2.index)
                                     continue
+                            else:
+                                continue
                                 
                             rfac1 = round(fac1, precision)
                             rfac2 = round(fac2, precision)
@@ -200,8 +189,8 @@ def intersect_edges_edges(overlay, precision = 4):
                                 nv1 = a2
 
                             if 0 < rfac2 < 1:
-                                ne2, nv2 = bmesh.utils.edge_split(edg2, b1, fac2)
-                                new_edges2.update({edg2, ne2})
+                                ne2, nv2 = bmesh.utils.edge_split(ed2, b1, fac2)
+                                new_edges2.update({ed2, ne2})
                                 splits[ed2] = sp_get(ed2, set()).union({ne2})
                             elif rfac2 == 0:
                                 nv2 = b1
@@ -245,13 +234,10 @@ class Push_Pull_Face(bpy.types.Operator):
             #edges to test intersect
             bm_edges = self.bm.edges
 
-            overlay = edges_BVH_overlap(bm_edges, edges, precision = 0.0001)
-            overlay = {k: v for k,v in overlay.items() if k not in edges} # remove repetition
-
-            #print([e.index for e in edges])
+            overlay = edges_BVH_overlap(edges, bm_edges, precision = 0.0001)
+            overlay = {k: v.difference(overlay) for k,v in overlay.items()} # remove repetition
             #for a, b in overlay.items():
                 #print(a.index, [e.index for e in b])
-
             new_edges1, new_edges2, targetmap = intersect_edges_edges(overlay)
             pos_weld = set()
             for e in new_edges1:
@@ -345,3 +331,4 @@ def unregister():
 
 if __name__ == "__main__":
     register()
+    
