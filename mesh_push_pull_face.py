@@ -41,7 +41,7 @@ def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
     oget = overlay.get
     for i1, ed1 in enumerate(aco):
         for i2, ed2 in enumerate(bco):
-            if ed1 != ed2:
+            if ed1 != ed2: #Rethink this, because you can't use copy()
                 a1, a2 = ed1
                 b1, b2 = ed2
 
@@ -184,10 +184,12 @@ def intersect_edges_edges(overlay, precision = 4):
                             rfac1 = round(fac1, precision)
                             rfac2 = round(fac2, precision)
                             ignore[edg1] = ig_get(edg1, set()).union({ed2})
+                            new_edges1.add(ed1)
+                            new_edges2.add(ed2)
 
                             if 0 < rfac1 < 1:
                                 ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
-                                new_edges1.update({ed1, ne1})
+                                new_edges1.add(ne1)
                                 splits[edg1] = sp_get(edg1, set()).union({ne1})
                             elif rfac1 == 0:
                                 nv1 = a1
@@ -196,7 +198,7 @@ def intersect_edges_edges(overlay, precision = 4):
 
                             if 0 < rfac2 < 1:
                                 ne2, nv2 = bmesh.utils.edge_split(edg2, b1, fac2)
-                                new_edges2.update({edg2, ne2})
+                                new_edges2.add(ne2)
                                 splits[ed2] = sp_get(ed2, set()).union({ne2})
                             elif rfac2 == 0:
                                 nv2 = b1
