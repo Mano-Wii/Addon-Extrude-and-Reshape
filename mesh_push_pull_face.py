@@ -99,21 +99,25 @@ def intersect_edges_edges(overlay, precision = 4):
                     v3 = a1.co-b1.co
                     
                     cross1 = v3.cross(v1)
-                    cross2 = v3.cross(v2)
                     x,y,z = abs(cross1.x), abs(cross1.y), abs(cross1.z)
                     lc1 = cross1.x if x >= y and x >= z else\
                           cross1.y if y >= x and y >= z else\
                           cross1.z
 
+                    cross2 = v3.cross(v2)
                     x,y,z = abs(cross2.x), abs(cross2.y), abs(cross2.z)
                     lc2 = cross2.x if x >= y and x >= z else\
                           cross2.y if y >= x and y >= z else\
                           cross2.z
 
-                    try:
+                    if lc1 == 0 and lc2 == 0: # test if are colinear (colinear is ignored)
+                        continue
+
+                    elif lc1 == 0 or lc2 == 0:
+                        coplanar = True
+
+                    else:
                         coplanar = (cross1/lc1).cross(cross2/lc2).to_tuple(precision) == (0,0,0) #cross cross is very inaccurate
-                    except ZeroDivisionError: # never?
-                        coplanar = (cross1).cross(cross2).to_tuple(precision) == (0,0,0)
                     
                     if coplanar:
                         cross3 = v2.cross(v1)
@@ -123,7 +127,7 @@ def intersect_edges_edges(overlay, precision = 4):
                               cross3.z
 
                         # test if are colinear (colinear is ignored)
-                        if abs(lc3) > fprec:
+                        if abs(lc3/(abs(lc1)+abs(lc2))) > fprec: # The division is in depending on different scales
                             fac1 = lc2/lc3
                             fac2 = lc1/lc3
                             
