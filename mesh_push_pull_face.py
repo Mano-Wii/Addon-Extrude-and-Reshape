@@ -31,37 +31,34 @@ bl_info = {
 
 import bpy
 import bmesh
-#from mathutils import Vector
 from bpy.props import FloatProperty
 
-def edges_BVH_overlap(edges1, edges2, precision = 0.0001):
+def edges_BVH_overlap(edges1, edges2, epsilon = 0.0001):
     aco = ([v.co for v in e.verts] for e in edges1)
     bco = [[v.co for v in e.verts] for e in edges2]
     overlay = {}
     oget = overlay.get
-    for i1, ed1 in enumerate(aco):
-        for i2, ed2 in enumerate(bco):
-            if ed1 != ed2: #Rethink this, because you can't use copy()
-                a1, a2 = ed1
-                b1, b2 = ed2
-
-                a1x, a2x = a1.x, a2.x
-                b1x, b2x = b1.x, b2.x
-                bbx1 = (a1x, a2x) if a1x < a2x else (a2x, a1x)
-                bbx2 = (b1x, b2x) if b1x < b2x else (b2x, b1x)
-                if (bbx1[0] - precision) <= bbx2[1] and bbx1[1] >= (bbx2[0] - precision):
-                    a1y, a2y = a1.y, a2.y
-                    b1y, b2y = b1.y, b2.y
-                    bby1 = (a1y, a2y) if a1y < a2y else (a2y, a1y)
-                    bby2 = (b1y, b2y) if b1y < b2y else (b2y, b1y)
-                    if (bby1[0] - precision) <= bby2[1] and bby1[1] >= (bby2[0] - precision):
-                        a1z, a2z = a1.z, a2.z
-                        b1z, b2z = b1.z, b2.z
-                        bbz1 = (a1z, a2z) if a1z < a2z else (a2z, a1z)
-                        bbz2 = (b1z, b2z) if b1z < b2z else (b2z, b1z)
-                        if (bbz1[0] - precision) <= bbz2[1] and bbz1[1] >= (bbz2[0] - precision):
-                            e1 = edges1[i1]
-                            overlay[e1] = oget(e1, set()).union({edges2[i2]})
+    for i1, (a1, a2) in enumerate(aco):
+        for i2, (b1, b2) in enumerate(bco):
+            c1, c2 = a1.x, a2.x
+            d1, d2 = b1.x, b2.x
+            c1, c2 = (c1 - epsilon, c2) if c1 <= c2 else (c2 - epsilon, c1)
+            d1, d2 = (d1 - epsilon, d2) if d1 <= d2 else (d2 - epsilon, d1)
+            if c1 <= d2 and c2 >= d1:
+                c1, c2 = a1.y, a2.y
+                d1, d2 = b1.y, b2.y
+                c1, c2 = (c1 - epsilon, c2) if c1 <= c2 else (c2 - epsilon, c1)
+                d1, d2 = (d1 - epsilon, d2) if d1 <= d2 else (d2 - epsilon, d1)
+                if c1 <= d2 and c2 >= d1:
+                    c1, c2 = a1.z, a2.z
+                    d1, d2 = b1.z, b2.z
+                    c1, c2 = (c1 - epsilon, c2) if c1 <= c2 else (c2 - epsilon, c1)
+                    d1, d2 = (d1 - epsilon, d2) if d1 <= d2 else (d2 - epsilon, d1)
+                    if c1 <= d2 and c2 >= d1:
+                        e1 = edges1[i1]
+                        e2 = edges2[i2]
+                        if e1 != e2:
+                            overlay[e1] = oget(e1, set()).union({e2})
     return overlay
 
 def intersect_edges_edges(overlay, precision = 4):
@@ -242,7 +239,7 @@ class Push_Pull_Face(bpy.types.Operator):
             #edges to test intersect
             bm_edges = self.bm.edges
 
-            overlay = edges_BVH_overlap(bm_edges, edges, precision = 0.0001)
+            overlay = edges_BVH_overlap(bm_edges, edges, epsilon = 0.0001)
             overlay = {k: v for k,v in overlay.items() if k not in edges} # remove repetition
 
             #print([e.index for e in edges])
