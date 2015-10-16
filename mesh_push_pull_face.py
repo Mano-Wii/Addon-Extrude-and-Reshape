@@ -108,16 +108,14 @@ def intersect_edges_edges(overlay, precision = 4):
                     if fpre_min <= fac1 <= fpre_max:
                         #print(edg1.index, 'can intersect', edg2.index)
                         ed1 = edg1
-                        va1 = a1
-                        va2 = a2
 
                     elif edg1 in splits:
                         for ed1 in splits[edg1]:
-                            va1 = ed1.verts[0]
-                            va2 = ed1.verts[1]
+                            a1 = ed1.verts[0]
+                            a2 = ed1.verts[1]
 
-                            vco1 = va1.co
-                            vco2 = va2.co
+                            vco1 = a1.co
+                            vco2 = a2.co
 
                             v = vco2-vco1
                             f = p1 - vco1
@@ -135,16 +133,14 @@ def intersect_edges_edges(overlay, precision = 4):
                     if fpre_min <= fac2 <= fpre_max:
                         #print(ed1.index, 'actually intersect', edg2.index)
                         ed2 = edg2
-                        vb1 = b1
-                        vb2 = b2
 
                     elif edg2 in splits:
                         for ed2 in splits[edg2]:
-                            vb1 = ed2.verts[0]
-                            vb2 = ed2.verts[1]
+                            b1 = ed2.verts[0]
+                            b2 = ed2.verts[1]
 
-                            vco1 = vb1.co
-                            vco2 = vb2.co
+                            vco1 = b1.co
+                            vco2 = b2.co
 
                             v = vco2-vco1
                             f = p2 - vco1
@@ -163,20 +159,20 @@ def intersect_edges_edges(overlay, precision = 4):
                     new_edges2.add(ed2)
 
                     if abs(fac1) <= epsilon:
-                        nv1 = va1
+                        nv1 = a1
                     elif fac1 + epsilon >= 1:
-                        nv1 = va2
+                        nv1 = a2
                     else:
-                        ne1, nv1 = bmesh.utils.edge_split(ed1, va1, fac1)
+                        ne1, nv1 = bmesh.utils.edge_split(ed1, a1, fac1)
                         new_edges1.add(ne1)
                         splits[edg1] = sp_get(edg1, set()).union({ne1})
 
                     if abs(fac2) <= epsilon:
-                        nv2 = vb1
+                        nv2 = b1
                     elif fac2 + epsilon >= 1:
-                        nv2 = vb2
+                        nv2 = b2
                     else:
-                        ne2, nv2 = bmesh.utils.edge_split(ed2, vb1, fac2)
+                        ne2, nv2 = bmesh.utils.edge_split(ed2, b1, fac2)
                         new_edges2.add(ne2)
                         splits[edg2] = sp_get(edg2, set()).union({ne2})
 
