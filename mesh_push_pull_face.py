@@ -76,12 +76,14 @@ def intersect_edges_edges(overlay, precision = 4):
     for ed1 in overlay:
         #print("***", ed1.index, "***")
         edg1 = ed1
-        for ed2 in overlay[ed1]:
+        for ed2 in overlay[edg1]:
             #print('loop', ed2.index)
             edg2 = ed2
+            ed1 = edg1
 
             a1 = ed1.verts[0]
             a2 = ed1.verts[1]
+
             b1 = ed2.verts[0]
             b2 = ed2.verts[1]
             
@@ -91,12 +93,13 @@ def intersect_edges_edges(overlay, precision = 4):
                 #print('linked')
                 continue
 
-            aco1, aco2, bco1, bco2 = a1.co, a2.co, b1.co, b2.co
+            aco1, aco2 = a1.co, a2.co
+            bco1, bco2 = b1.co, b2.co
             tp = intersect_line_line(aco1, aco2, bco1, bco2)
             if tp:
                 p1, p2 = tp
             else:
-                #print("parallel or collinear")
+                print("parallel or collinear")
                 continue
 
             if (p1 - p2).to_tuple(precision) == (0,0,0):
@@ -115,10 +118,10 @@ def intersect_edges_edges(overlay, precision = 4):
                 fac2 = f[max2]/v[max2]
 
                 if fpre_min <= fac1 <= fpre_max:
-                    #print(ed1.index, 'can intersect', ed2.index)
+                    #print(edg1.index, 'can intersect', edg2.index)
                     pass
-                elif ed1 in splits:
-                    for e in splits[ed1]:
+                elif edg1 in splits:
+                    for e in splits[edg1]:
                         a1 = e.verts[0]
                         a2 = e.verts[1]
 
@@ -129,21 +132,21 @@ def intersect_edges_edges(overlay, precision = 4):
                         f = p1 - aco1
                         fac1 = f[max1]/v[max1]
                         if fpre_min <= fac1 <= fpre_max:
-                            #print(e.index, 'can intersect', ed2.index)
+                            #print(e.index, 'can intersect', edg2.index)
                             ed1 = e
                             break
                     else:
-                        #print(ed1.index, 'really does not intersect', ed2.index)
+                        #print(edg1.index, 'really does not intersect', edg2.index)
                         continue
                 else:
-                    #print(ed1.index, 'not intersect', ed2.index)
+                    #print(edg1.index, 'not intersect', edg2.index)
                     continue
 
                 if fpre_min <= fac2 <= fpre_max:
-                    #print(ed1.index, 'actually intersect', ed2.index)
+                    #print(ed1.index, 'actually intersect', edg2.index)
                     pass
-                elif ed2 in splits:
-                    for e in splits[ed2]:
+                elif edg2 in splits:
+                    for e in splits[edg2]:
                         b1 = e.verts[0]
                         b2 = e.verts[1]
 
@@ -161,7 +164,7 @@ def intersect_edges_edges(overlay, precision = 4):
                         #print(ed1.index, 'really does not intersect', ed2.index)
                         continue
                 else:
-                    #print(ed1.index, 'not intersect', ed2.index)
+                    #print(ed1.index, 'not intersect', edg2.index)
                     continue
 
                 ignore[ed1] = ig_get(ed1, set()).union({ed2})
