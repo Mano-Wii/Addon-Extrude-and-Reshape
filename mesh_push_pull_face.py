@@ -89,9 +89,7 @@ def edges_BVH_overlap(bm, edges2, epsilon = 0.0001):
             c1x = c2x - epsilon
             c2x = tm
         for bvh in bco:
-            d1 = bvh.c1x
-            d2 = bvh.c2x
-            if c1x <= d2 and c2x >= d1:
+            if c1x <= bvh.c2x and c2x >= bvh.c1x:
                 if by:
                     by = False
                     c1y = a1.co.y
@@ -102,9 +100,7 @@ def edges_BVH_overlap(bm, edges2, epsilon = 0.0001):
                         tm = c1y
                         c1y = c2y - epsilon
                         c2y = tm
-                d1 = bvh.c1y
-                d2 = bvh.c2y
-                if c1y <= d2 and c2y >= d1:
+                if c1y <= bvh.c2y and c2y >= bvh.c1y:
                     if bz:
                         bz = False
                         c1z = a1.co.z
@@ -115,9 +111,7 @@ def edges_BVH_overlap(bm, edges2, epsilon = 0.0001):
                             tm = c1z
                             c1z = c2z - epsilon
                             c2z = tm
-                    d1 = bvh.c1z
-                    d2 = bvh.c2z
-                    if c1z <= d2 and c2z >= d1:
+                    if c1z <= bvh.c2z and c2z >= bvh.c1z:
                         e2 = bm.edges[bvh.i]
                         if e1 != e2:
                             overlay[e1] = overlay.get(e1, set()).union({e2})
@@ -311,20 +305,6 @@ class Push_Pull_Face(bpy.types.Operator):
                     nf = bmesh.utils.face_split(f, v1, v2)
                     #sp_faces2.update({f, nf[0]})
 
-            #print([f.index for f in sp_faces1])
-            #print([f.index for f in sp_faces2])
-            '''print([e.index for e in sface.edges])
-            normal = (-sface.normal).to_tuple(5)
-            for e in sface.edges:
-                if e.calc_face_angle(0) < 0.01:
-                    print(len(e.link_faces))
-                    for f in e.link_faces:
-                        if f != sface and\
-                            (f.normal.to_tuple(5) == normal or\
-                            (-f.normal).to_tuple(5) == normal):
-                                sface.copy_from_face_interp(f, True)
-                                break'''
-                
             bmesh.update_edit_mesh(self.mesh, tessface=True, destructive=True)
             return {'FINISHED'}
         if self.cancel:
@@ -336,10 +316,6 @@ class Push_Pull_Face(bpy.types.Operator):
     def execute(self, context):
         self.mesh = context.object.data
         self.bm = bmesh.from_edit_mesh(self.mesh)
-        #from mathutils.bvhtree import BVHTree
-        #t = time.time()
-        #BVHTree.FromBMesh(self.bm, epsilon=0.0)
-        #print(time.time()-t)
         try:
             selection = self.bm.select_history[-1]
         except:
