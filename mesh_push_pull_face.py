@@ -35,16 +35,16 @@ from bpy.props import FloatProperty
 
 class BVHco():
     i = 0
-    c1x = 0
-    c1y = 0
-    c1z = 0
-    c2x = 0
-    c2y = 0
-    c2z = 0
-    
-def edges_BVH_overlap(bm, edges2, epsilon = 0.0001):
+    c1x = 0.0
+    c1y = 0.0
+    c1z = 0.0
+    c2x = 0.0
+    c2y = 0.0
+    c2z = 0.0
+
+def edges_BVH_overlap(bm, edges, epsilon = 0.0001):
     bco = set()
-    for e in edges2:
+    for e in edges:
         bvh = BVHco()
         bvh.i = e.index
         b1 = e.verts[0]
@@ -53,40 +53,39 @@ def edges_BVH_overlap(bm, edges2, epsilon = 0.0001):
         co2 = b2.co.x
         if co1 <= co2:
             bvh.c1x = co1 - epsilon
-            bvh.c2x = co2
+            bvh.c2x = co2 + epsilon
         else:
             bvh.c1x = co2 - epsilon
-            bvh.c2x = co1
+            bvh.c2x = co1 + epsilon
         co1 = b1.co.y
         co2 = b2.co.y
         if co1 <= co2:
             bvh.c1y = co1 - epsilon
-            bvh.c2y = co2
+            bvh.c2y = co2 + epsilon
         else:
             bvh.c1y = co2 - epsilon
-            bvh.c2y = co1
+            bvh.c2y = co1 + epsilon
         co1 = b1.co.z
         co2 = b2.co.z
         if co1 <= co2:
             bvh.c1z = co1 - epsilon
-            bvh.c2z = co2
+            bvh.c2z = co2 + epsilon
         else:
             bvh.c1z = co2 - epsilon
-            bvh.c2z = co1
+            bvh.c2z = co1 + epsilon
         bco.add(bvh)
-    del edges2
+    del edges
     overlay = {}
+    oget = overlay.get
     for e1 in bm.edges:
         by = bz = True
         a1 = e1.verts[0]
         a2 = e1.verts[1]
         c1x = a1.co.x
         c2x = a2.co.x
-        if c1x <= c2x:
-            c1x -= epsilon
-        else:
+        if c1x > c2x:
             tm = c1x
-            c1x = c2x - epsilon
+            c1x = c2x
             c2x = tm
         for bvh in bco:
             if c1x <= bvh.c2x and c2x >= bvh.c1x:
@@ -94,27 +93,23 @@ def edges_BVH_overlap(bm, edges2, epsilon = 0.0001):
                     by = False
                     c1y = a1.co.y
                     c2y = a2.co.y
-                    if c1y <= c2y:
-                        c1y -= epsilon
-                    else:
+                    if c1y > c2y:
                         tm = c1y
-                        c1y = c2y - epsilon
+                        c1y = c2y
                         c2y = tm
                 if c1y <= bvh.c2y and c2y >= bvh.c1y:
                     if bz:
                         bz = False
                         c1z = a1.co.z
                         c2z = a2.co.z
-                        if c1z <= c2z:
-                            c1z -= epsilon
-                        else:
+                        if c1z > c2z:
                             tm = c1z
-                            c1z = c2z - epsilon
+                            c1z = c2z
                             c2z = tm
                     if c1z <= bvh.c2z and c2z >= bvh.c1z:
                         e2 = bm.edges[bvh.i]
                         if e1 != e2:
-                            overlay[e1] = overlay.get(e1, set()).union({e2})
+                            overlay[e1] = oget(e1, set()).union({e2})
     return overlay
 
 def intersect_edges_edges(overlay, precision = 4):
@@ -262,7 +257,6 @@ class Push_Pull_Face(bpy.types.Operator):
             # edges to intersect
             edges = set()
             [[edges.add(ed) for ed in v.link_edges] for v in sface.verts]
-            edges = list(edges)
 
             overlay = edges_BVH_overlap(self.bm, edges, epsilon = 0.0001)
             overlay = {k: v for k,v in overlay.items() if k not in edges} # remove repetition
