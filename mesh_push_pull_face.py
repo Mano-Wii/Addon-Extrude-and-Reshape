@@ -29,37 +29,98 @@ bl_info = {
     "wiki_url" : "http://blenderartists.org/forum/showthread.php?376618-Addon-Push-Pull-Face",
     "category": "Mesh"}
 
-import bpy
-import bmesh
+import bpy, bmesh
 from mathutils.geometry import intersect_line_line
 from bpy.props import FloatProperty
 
-def edges_BVH_overlap(edges1, edges2, epsilon = 0.0001):
-    aco = ([v.co for v in e.verts] for e in edges1)
-    bco = [[v.co for v in e.verts] for e in edges2]
+class BVHco():
+    i = 0
+    c1x = 0
+    c1y = 0
+    c1z = 0
+    c2x = 0
+    c2y = 0
+    c2z = 0
+    
+def edges_BVH_overlap(bm, edges2, epsilon = 0.0001):
+    bco = set()
+    for e in edges2:
+        bvh = BVHco()
+        bvh.i = e.index
+        b1 = e.verts[0]
+        b2 = e.verts[1]
+        co1 = b1.co.x
+        co2 = b2.co.x
+        if co1 <= co2:
+            bvh.c1x = co1 - epsilon
+            bvh.c2x = co2
+        else:
+            bvh.c1x = co2 - epsilon
+            bvh.c2x = co1
+        co1 = b1.co.y
+        co2 = b2.co.y
+        if co1 <= co2:
+            bvh.c1y = co1 - epsilon
+            bvh.c2y = co2
+        else:
+            bvh.c1y = co2 - epsilon
+            bvh.c2y = co1
+        co1 = b1.co.z
+        co2 = b2.co.z
+        if co1 <= co2:
+            bvh.c1z = co1 - epsilon
+            bvh.c2z = co2
+        else:
+            bvh.c1z = co2 - epsilon
+            bvh.c2z = co1
+        bco.add(bvh)
+    del edges2
     overlay = {}
-    oget = overlay.get
-    for i1, (a1, a2) in enumerate(aco):
-        for i2, (b1, b2) in enumerate(bco):
-            c1, c2 = a1.x, a2.x
-            d1, d2 = b1.x, b2.x
-            c1, c2 = (c1 - epsilon, c2) if c1 <= c2 else (c2 - epsilon, c1)
-            d1, d2 = (d1 - epsilon, d2) if d1 <= d2 else (d2 - epsilon, d1)
-            if c1 <= d2 and c2 >= d1:
-                c1, c2 = a1.y, a2.y
-                d1, d2 = b1.y, b2.y
-                c1, c2 = (c1 - epsilon, c2) if c1 <= c2 else (c2 - epsilon, c1)
-                d1, d2 = (d1 - epsilon, d2) if d1 <= d2 else (d2 - epsilon, d1)
-                if c1 <= d2 and c2 >= d1:
-                    c1, c2 = a1.z, a2.z
-                    d1, d2 = b1.z, b2.z
-                    c1, c2 = (c1 - epsilon, c2) if c1 <= c2 else (c2 - epsilon, c1)
-                    d1, d2 = (d1 - epsilon, d2) if d1 <= d2 else (d2 - epsilon, d1)
-                    if c1 <= d2 and c2 >= d1:
-                        e1 = edges1[i1]
-                        e2 = edges2[i2]
+    for e1 in bm.edges:
+        by = bz = True
+        a1 = e1.verts[0]
+        a2 = e1.verts[1]
+        c1x = a1.co.x
+        c2x = a2.co.x
+        if c1x <= c2x:
+            c1x -= epsilon
+        else:
+            tm = c1x
+            c1x = c2x - epsilon
+            c2x = tm
+        for bvh in bco:
+            d1 = bvh.c1x
+            d2 = bvh.c2x
+            if c1x <= d2 and c2x >= d1:
+                if by:
+                    by = False
+                    c1y = a1.co.y
+                    c2y = a2.co.y
+                    if c1y <= c2y:
+                        c1y -= epsilon
+                    else:
+                        tm = c1y
+                        c1y = c2y - epsilon
+                        c2y = tm
+                d1 = bvh.c1y
+                d2 = bvh.c2y
+                if c1y <= d2 and c2y >= d1:
+                    if bz:
+                        bz = False
+                        c1z = a1.co.z
+                        c2z = a2.co.z
+                        if c1z <= c2z:
+                            c1z -= epsilon
+                        else:
+                            tm = c1z
+                            c1z = c2z - epsilon
+                            c2z = tm
+                    d1 = bvh.c1z
+                    d2 = bvh.c2z
+                    if c1z <= d2 and c2z >= d1:
+                        e2 = bm.edges[bvh.i]
                         if e1 != e2:
-                            overlay[e1] = oget(e1, set()).union({e2})
+                            overlay[e1] = overlay.get(e1, set()).union({e2})
     return overlay
 
 def intersect_edges_edges(overlay, precision = 4):
@@ -209,10 +270,7 @@ class Push_Pull_Face(bpy.types.Operator):
             [[edges.add(ed) for ed in v.link_edges] for v in sface.verts]
             edges = list(edges)
 
-            #edges to test intersect
-            bm_edges = self.bm.edges
-
-            overlay = edges_BVH_overlap(bm_edges, edges, epsilon = 0.0001)
+            overlay = edges_BVH_overlap(self.bm, edges, epsilon = 0.0001)
             overlay = {k: v for k,v in overlay.items() if k not in edges} # remove repetition
 
             #print([e.index for e in edges])
@@ -229,6 +287,7 @@ class Push_Pull_Face(bpy.types.Operator):
                 bmesh.ops.weld_verts(self.bm, targetmap=targetmap)
             #print([e.is_valid for e in new_edges1])
             #print([e.is_valid for e in new_edges2])
+            #sp_faces1 = set()
             for e in pos_weld:
                 v1, v2 = e
                 lf1 = set(v1.link_faces)
@@ -236,10 +295,12 @@ class Push_Pull_Face(bpy.types.Operator):
                 rlfe = lf1.intersection(lf2)
                 for f in rlfe:
                     try:
-                        bmesh.utils.face_split(f, v1, v2)
+                        nf = bmesh.utils.face_split(f, v1, v2)
+                        #sp_faces1.update({f, nf[0]})
                     except:
                         pass
-                
+
+            #sp_faces2 = set()
             for e in new_edges2:
                 lfe = set(e.link_faces)
                 v1, v2 = e.verts
@@ -247,8 +308,23 @@ class Push_Pull_Face(bpy.types.Operator):
                 lf2 = set(v2.link_faces)
                 rlfe = lf1.intersection(lf2)
                 for f in rlfe.difference(lfe):
-                    bmesh.utils.face_split(f, v1, v2)
-            
+                    nf = bmesh.utils.face_split(f, v1, v2)
+                    #sp_faces2.update({f, nf[0]})
+
+            #print([f.index for f in sp_faces1])
+            #print([f.index for f in sp_faces2])
+            '''print([e.index for e in sface.edges])
+            normal = (-sface.normal).to_tuple(5)
+            for e in sface.edges:
+                if e.calc_face_angle(0) < 0.01:
+                    print(len(e.link_faces))
+                    for f in e.link_faces:
+                        if f != sface and\
+                            (f.normal.to_tuple(5) == normal or\
+                            (-f.normal).to_tuple(5) == normal):
+                                sface.copy_from_face_interp(f, True)
+                                break'''
+                
             bmesh.update_edit_mesh(self.mesh, tessface=True, destructive=True)
             return {'FINISHED'}
         if self.cancel:
@@ -260,6 +336,10 @@ class Push_Pull_Face(bpy.types.Operator):
     def execute(self, context):
         self.mesh = context.object.data
         self.bm = bmesh.from_edit_mesh(self.mesh)
+        #from mathutils.bvhtree import BVHTree
+        #t = time.time()
+        #BVHTree.FromBMesh(self.bm, epsilon=0.0)
+        #print(time.time()-t)
         try:
             selection = self.bm.select_history[-1]
         except:
