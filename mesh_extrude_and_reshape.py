@@ -20,12 +20,12 @@
 # Twitter:  wii_mano @mano_wii
 
 bl_info = {
-    "name": "Push Pull Face",
+    "name": "Extrude and Reshape",
     "author": "Germano Cavalcante",
-    "version": (0, 8),
-    "blender": (2, 76, 0),
+    "version": (0, 8, 1),
+    "blender": (2, 76, 5),
     "location": "View3D > TOOLS > Tools > Mesh Tools > Add: > Extrude Menu (Alt + E)",
-    "description": "Push and pull face entities to sculpt 3d models",
+    "description": "Extrude face and merge edge intersections between the mesh and the new edges",
     "wiki_url" : "http://blenderartists.org/forum/showthread.php?376618-Addon-Push-Pull-Face",
     "category": "Mesh"}
 
@@ -75,8 +75,8 @@ def edges_BVH_overlap(bm, edges, epsilon = 0.0001):
             bvh.c2z = co1 + epsilon
         bco.add(bvh)
     del edges
-    overlay = {}
-    oget = overlay.get
+    overlap = {}
+    oget = overlap.get
     for e1 in bm.edges:
         by = bz = True
         a1 = e1.verts[0]
@@ -109,10 +109,10 @@ def edges_BVH_overlap(bm, edges, epsilon = 0.0001):
                     if c1z <= bvh.c2z and c2z >= bvh.c1z:
                         e2 = bm.edges[bvh.i]
                         if e1 != e2:
-                            overlay[e1] = oget(e1, set()).union({e2})
-    return overlay
+                            overlap[e1] = oget(e1, set()).union({e2})
+    return overlap
 
-def intersect_edges_edges(overlay, precision = 4):
+def intersect_edges_edges(overlap, precision = 4):
     epsilon = .1**precision
     fpre_min = -epsilon
     fpre_max = 1+epsilon
@@ -121,15 +121,15 @@ def intersect_edges_edges(overlay, precision = 4):
     new_edges1 = set()
     new_edges2 = set()
     targetmap = {}
-    for edg1 in overlay:
+    for edg1 in overlap:
         #print("***", ed1.index, "***")
-        for edg2 in overlay[edg1]:
+        for edg2 in overlap[edg1]:
             #print('loop', ed2.index)
             a1 = edg1.verts[0]
             a2 = edg1.verts[1]
             b1 = edg2.verts[0]
             b2 = edg2.verts[1]
-            
+
             # test if are linked
             if a1 in {b1, b2} or a2 in {b1, b2}:
                 #print('linked')
@@ -234,10 +234,10 @@ def intersect_edges_edges(overlay, precision = 4):
                 #print("parallel or collinear")
     return new_edges1, new_edges2, targetmap
 
-class Push_Pull_Face(bpy.types.Operator):
+class Extrude_and_Reshape(bpy.types.Operator):
     """Push and pull face entities to sculpt 3d models"""
-    bl_idname = "mesh.push_pull_face"
-    bl_label = "Push/Pull Face"
+    bl_idname = "mesh.extrude_reshape"
+    bl_label = "Extrude and Reshape"
     bl_options = {'REGISTER', 'GRAB_CURSOR', 'BLOCKING'}
 
     @classmethod
@@ -258,14 +258,14 @@ class Push_Pull_Face(bpy.types.Operator):
             edges = set()
             [[edges.add(ed) for ed in v.link_edges] for v in sface.verts]
 
-            overlay = edges_BVH_overlap(self.bm, edges, epsilon = 0.0001)
-            overlay = {k: v for k,v in overlay.items() if k not in edges} # remove repetition
+            overlap = edges_BVH_overlap(self.bm, edges, epsilon = 0.0001)
+            overlap = {k: v for k,v in overlap.items() if k not in edges} # remove repetition
 
             #print([e.index for e in edges])
-            #for a, b in overlay.items():
+            #for a, b in overlap.items():
                 #print(a.index, [e.index for e in b])
 
-            new_edges1, new_edges2, targetmap = intersect_edges_edges(overlay)
+            new_edges1, new_edges2, targetmap = intersect_edges_edges(overlap)
             pos_weld = set()
             for e in new_edges1:
                 v1, v2 = e.verts
@@ -331,9 +331,9 @@ class Push_Pull_Face(bpy.types.Operator):
                 if abs(edge.calc_face_angle(0) - 1.5707963267948966) < 0.01: #self.angle_tolerance:
                     geom.append(edge)
 
-            dict = bmesh.ops.extrude_discrete_faces(self.bm, faces = [face])
-            
-            for face in dict['faces']:
+            ret_dict = bmesh.ops.extrude_discrete_faces(self.bm, faces = [face])
+
+            for face in ret_dict['faces']:
                 self.bm.faces.active = face
                 face.select = True
                 sface = face
@@ -350,15 +350,15 @@ class Push_Pull_Face(bpy.types.Operator):
 def operator_draw(self,context):
     layout = self.layout
     col = layout.column(align=True)
-    col.operator("mesh.push_pull_face", text="Push/Pull Face")
+    col.operator("mesh.extrude_reshape", text="Extrude and Reshape")
 
 def register():
-    bpy.utils.register_class(Push_Pull_Face)
+    bpy.utils.register_class(Extrude_and_Reshape)
     bpy.types.VIEW3D_MT_edit_mesh_extrude.append(operator_draw)
 
 def unregister():
     bpy.types.VIEW3D_MT_edit_mesh_extrude.remove(operator_draw)
-    bpy.utils.unregister_class(Push_Pull_Face)
+    bpy.utils.unregister_class(Extrude_and_Reshape)
 
 if __name__ == "__main__":
     register()
